@@ -33,7 +33,6 @@ function notifyFalseDataToSlack() {
       description: '【エージェント面談】エルメにいて、求職者管理にいない',
       checkCol: 9,             // J列通知するしないを判断する行
       format: (row) => `${row[5]} / 日時: ${row[0]}${row[1]} / 担当: ${row[6]})`
-
     },
   ];
 
@@ -45,7 +44,12 @@ function notifyFalseDataToSlack() {
     if (!sheet) return; // シート名が見つからなければスキップ
 
     const data = sheet.getDataRange().getDisplayValues();
-    var messages_in_sheet = []
+    const headers = data[0]; // 1行目のデータ（見出し）を取得
+    let messages_in_sheet = [];
+    
+    // チェックしたい列のインデックス（L=11, N=13, P=15, R=17）
+    const warningCols = [11, 13, 15, 17];
+
     // 1行目はヘッダー（見出し）と想定して、2行目（インデックス1）からループ
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
@@ -53,11 +57,31 @@ function notifyFalseDataToSlack() {
       
       // 値が false または文字列の "FALSE" の場合を抽出
       if (targetValue === false || String(targetValue).toUpperCase() === 'FALSE') {
-        messages_in_sheet.push(config.format(row)+'\n');
+        let rowMessage = config.format(row);
+        let warnings = [];
+        
+        // L, N, P, R列を順番にチェックする
+        warningCols.forEach(col => {
+          if (row[col] === true || String(row[col]).toUpperCase() === 'TRUE') {
+            // TRUEになっていたら、1行目の見出しテキストを保存する
+            warnings.push(headers[col]);
+          }
+        });
+        
+        // TRUEになっている列が1つでもあれば、メッセージの末尾に注意書きを足す
+        // （複数ある場合は「※氏名違い... / 日付違い...」のように繋がります）
+        if (warnings.length > 0) {
+          rowMessage += `　※${warnings.join(' / ')}`;
+        }
+        
+        // 配列に1行分のメッセージを追加
+        messages_in_sheet.push(rowMessage);
       }
     }
+    
     if(messages_in_sheet.length > 0){
-      messages.push(`${config.description}\n` + messages_in_sheet + '\n')
+      // join('\n') を使うことで、余計なカンマが入らずに綺麗に改行されます
+      messages.push(`■ ${config.description}\n` + messages_in_sheet.join('\n'));
     }
   });
 
@@ -74,7 +98,7 @@ function notifyFalseDataToSlack() {
       contentType: 'application/json',
       payload: JSON.stringify(payload)
     };
-    console.log(payload.text)
+    console.log(payload.text);
     UrlFetchApp.fetch(WEBHOOK_URL, options);
   }
 }
