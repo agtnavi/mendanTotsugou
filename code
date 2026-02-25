@@ -1,0 +1,80 @@
+function notifyFalseDataToSlack() {
+  // ▼▼ ここにステップ1で取得したURLを貼り付けます ▼▼
+  const WEBHOOK_URL = 'https://hooks.slack.com/services/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';
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let messages = [];
+
+  // ==========================================
+  // 【設定エリア】4つのシートそれぞれのルールを定義します
+  // ※列の番号は「0始まり」です（A列=0, B列=1, C列=2... J列=9）
+  // ==========================================
+  const sheetConfigs = [
+    {
+      sheetName: '求職者管理／ナビ面談',   // 実際のシート名に変更してください
+      description: '【ナビ面談】求職者管理にいて、エルメにいない',
+      checkCol: 9,             // J列通知するしないを判断する行
+      format: (row) => `${row[4]}${row[2]} / 種別: ${row[3]} / 日時: ${row[5]}${row[6]} / 担当: ${row[7]})`
+    },
+    {
+      sheetName: 'エルメ／ナビ面談',
+      description: '【ナビ面談】エルメにいて、求職者管理にいない',
+      checkCol: 9,             // J列通知するしないを判断する行
+      format: (row) => `${row[5]} / 種別: ${row[6]} / 日時: ${row[4]}${row[1]} / 担当: ${row[7]})`
+    },
+    {
+      sheetName: '求職者管理／AGT面談',
+      description: '【エージェント面談】求職者管理にいて、エルメにいない',
+      checkCol: 9,             // J列通知するしないを判断する行
+      format: (row) => `${row[3]}${row[2]} / 日時: ${row[6]} / 担当: ${row[4]}${row[5]})`
+    },
+    {
+      sheetName: 'エルメ／AGT面談',
+      description: '【エージェント面談】エルメにいて、求職者管理にいない',
+      checkCol: 9,             // J列通知するしないを判断する行
+      format: (row) => `${row[5]} / 日時: ${row[0]}${row[1]} / 担当: ${row[6]})`
+
+    },
+  ];
+
+  // ==========================================
+  // データ抽出と通知メッセージの作成
+  // ==========================================
+  sheetConfigs.forEach(config => {
+    const sheet = ss.getSheetByName(config.sheetName);
+    if (!sheet) return; // シート名が見つからなければスキップ
+
+    const data = sheet.getDataRange().getDisplayValues();
+    var messages_in_sheet = []
+    // 1行目はヘッダー（見出し）と想定して、2行目（インデックス1）からループ
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const targetValue = row[config.checkCol];
+      
+      // 値が false または文字列の "FALSE" の場合を抽出
+      if (targetValue === false || String(targetValue).toUpperCase() === 'FALSE') {
+        messages_in_sheet.push(config.format(row)+'\n');
+      }
+    }
+    if(messages_in_sheet.length > 0){
+      messages.push(`${config.description}\n` + messages_in_sheet + '\n')
+    }
+  });
+
+  // ==========================================
+  // Slackへ送信
+  // ==========================================
+  if (messages.length > 0) {
+    const payload = {
+      text: "⚠️ [我妻テスト中]以下はエルメにしかいない、もしくは求職者管理にしかいないデータです:\n以下のスプレッドシートから確認してください\n https://docs.google.com/spreadsheets/d/1QXLslBVdW8Irrtiu2Cq5E7cDYTL7h4M6sro2LiIKaFk/edit?gid=0#gid=0\n\n" + messages.join('\n\n')
+    };
+    
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload)
+    };
+    console.log(payload.text)
+    UrlFetchApp.fetch(WEBHOOK_URL, options);
+  }
+}
