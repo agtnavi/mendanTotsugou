@@ -1,6 +1,7 @@
 function notifyFalseDataToSlack() {
   // ▼▼ ここにステップ1で取得したURLを貼り付けます ▼▼
-  const WEBHOOK_URL = 'https://hooks.slack.com/services/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';
+  const WEBHOOK_URL = `https://hooks.slack.com/services/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`
+  //'https://hooks.slack.com/services/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'//'https://hooks.slack.com/services/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';
   
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let messages = [];
@@ -71,7 +72,7 @@ function notifyFalseDataToSlack() {
         // TRUEになっている列が1つでもあれば、メッセージの末尾に注意書きを足す
         // （複数ある場合は「※氏名違い... / 日付違い...」のように繋がります）
         if (warnings.length > 0) {
-          rowMessage += `　※${warnings.join(' / ')}`;
+          rowMessage += `　\`※${warnings.join(' / ')}\``;
         }
         
         // 配列に1行分のメッセージを追加
@@ -90,7 +91,7 @@ function notifyFalseDataToSlack() {
   // ==========================================
   if (messages.length > 0) {
     const payload = {
-      text: "⚠️ [我妻テスト中]以下はエルメにしかいない、もしくは求職者管理にしかいないデータです:\n以下のスプレッドシートから確認してください\n https://docs.google.com/spreadsheets/d/1QXLslBVdW8Irrtiu2Cq5E7cDYTL7h4M6sro2LiIKaFk/edit?gid=0#gid=0\n\n" + messages.join('\n\n')
+      text: "⚠️ 以下はエルメにしかいない、もしくは求職者管理にしかいないデータです:\n以下のスプレッドシートから確認してください\n https://docs.google.com/spreadsheets/d/1QXLslBVdW8Irrtiu2Cq5E7cDYTL7h4M6sro2LiIKaFk/edit?gid=0#gid=0\n\n" + messages.join('\n\n')
     };
     
     const options = {
